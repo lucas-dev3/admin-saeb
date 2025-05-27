@@ -64,15 +64,22 @@ export const Questao: React.FC = () => {
           apiKey="jj148sughvuqwlftlb4ung4hi6dvtpk2uj0cofklyn781n7o"
           init={{
             menubar: false,
+            external_plugins: {
+              tiny_mce_wiris: '/node_modules/@wiris/mathtype-tinymce6/plugin.min.js',
+            },
             plugins: [
               "advlist autolink lists link image charmap print preview anchor",
               "searchreplace visualblocks code fullscreen",
               "insertdatetime media table paste code help wordcount",
+              "tiny_mce_wiris",
             ],
             toolbar:
               "undo redo | formatselect | bold italic backcolor | \
               alignleft aligncenter alignright alignjustify | \
-              bullist numlist outdent indent | removeformat | help",
+              bullist numlist outdent indent | removeformat | help | \
+              tiny_mce_wiris_formulaEditor tiny_mce_wiris_formulaEditorChemistry",
+            draggable_modal: true,
+            extended_valid_elements: "*[.*]",
           }}
           onEditorChange={(content: any) => setCurrentConteudo(content)}
         />

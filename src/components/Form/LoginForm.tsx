@@ -1,9 +1,11 @@
-import { Form, Input, Button, Card } from "antd";
+import { Form, Input, Button } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as S from "./styles";
 import logo from "../../assets/logo.png";
-
+import { useAuth } from "../../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 type LoginFormData = {
   email: string;
   password: string;
@@ -11,14 +13,23 @@ type LoginFormData = {
 
 export function LoginForm() {
   const [loading, setLoading] = useState(false);
+  const { login, authenticated } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (authenticated) {
+      navigate("/dashboard");
+    }
+  }, [authenticated, navigate]);
 
   const onFinish = async (values: LoginFormData) => {
     try {
       setLoading(true);
-      console.log("Valores do formulário:", values);
-      // Aqui você pode adicionar a lógica de autenticação
-    } catch (error) {
-      console.error("Erro ao fazer login:", error);
+      await login(values.email, values.password);
+    } catch (error: any) {
+      const message =
+        error.response?.data?.message || error.message || "Erro ao fazer login";
+      toast.error(message);
     } finally {
       setLoading(false);
     }

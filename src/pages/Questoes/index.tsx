@@ -1,15 +1,11 @@
-import { useState } from "react";
-import { Table, Button, Modal, Form, Input, Space, message } from "antd";
-import {
-  PlusOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  FolderOutlined,
-  FileOutlined,
-} from "@ant-design/icons";
+import { useState, useEffect } from "react";
+import { Button, Modal, Form, Input, message, Empty, Spin } from "antd";
+import { PlusCircleOutlined } from "@ant-design/icons";
 import { Card } from "../../components/StatsCard/Card";
 import { useNavigate } from "react-router-dom";
 import FileTree from "../../components/FileTree";
+import api from "../../services/api";
+import { SubjectModal } from "../../components/SubjectModal";
 
 // Tipo da Questão
 interface Questao {
@@ -21,6 +17,14 @@ interface Questao {
   creationDate: string;
   category: string;
   status: string;
+}
+
+interface Subject {
+  id: string;
+  name: string;
+  description: string;
+  questions: any[];
+  children: Subject[];
 }
 
 const DADOS_MOCK: Questao[] = [
@@ -50,19 +54,25 @@ export const Questoes: React.FC = () => {
   const [questoes, setQuestoes] = useState<Questao[]>(DADOS_MOCK);
   const [modalVisivel, setModalVisivel] = useState(false);
   const [modalDeleteVisivel, setModalDeleteVisivel] = useState(false);
-  const [questaoEditando, setQuestaoEditando] = useState<Questao | null>(null);
-  const [questaoDeletando, setQuestaoDeletando] = useState<Questao | null>(
-    null
-  );
+  const [questaoEditando] = useState<Questao | null>(null);
+  const [questaoDeletando] = useState<Questao | null>(null);
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loadingAssuntos, setLoadingAssuntos] = useState(false);
+  // Estado do modal de criar assunto
+  const [modalAssuntoVisivel, setModalAssuntoVisivel] = useState(false);
+  const [parentIdAssunto, setParentIdAssunto] = useState<string | null>(null);
+  const [formAssunto] = Form.useForm();
+  const [editandoAssunto, setEditandoAssunto] = useState<Subject | null>(null);
+  const [loadingAssunto, setLoadingAssunto] = useState(false);
 
   // Abrir modal para editar
-  const abrirModalEditar = (questao: Questao) => {
-    setQuestaoEditando(questao);
-    form.setFieldsValue(questao);
-    setModalVisivel(true);
-  };
+  // const abrirModalEditar = (questao: Questao) => {
+  //   setQuestaoEditando(questao);
+  //   form.setFieldsValue(questao);
+  //   setModalVisivel(true);
+  // };
 
   // Salvar (criar ou editar)
   const onSalvar = (values: any) => {
@@ -91,10 +101,10 @@ export const Questoes: React.FC = () => {
   };
 
   // Abrir modal de confirmação de delete
-  const abrirModalDelete = (questao: Questao) => {
-    setQuestaoDeletando(questao);
-    setModalDeleteVisivel(true);
-  };
+  // const abrirModalDelete = (questao: Questao) => {
+  //   setQuestaoDeletando(questao);
+  //   setModalDeleteVisivel(true);
+  // };
 
   // Confirmar delete
   const confirmarDelete = () => {
@@ -105,6 +115,89 @@ export const Questoes: React.FC = () => {
     setModalDeleteVisivel(false);
   };
 
+  // Buscar subjects da API
+  const fetchSubjects = async () => {
+    setLoadingAssuntos(true);
+    try {
+      const data = await api.get("/subjects");
+      setSubjects(data.data || data); // caso a API retorne { data: [...] }
+    } catch (e) {
+      setSubjects([]);
+    } finally {
+      setLoadingAssuntos(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSubjects();
+  }, []);
+
+  // Handlers para modal de assunto
+  const abrirModalCriarAssunto = (parentId: string | null = null) => {
+    setParentIdAssunto(parentId);
+    setEditandoAssunto(null);
+    setModalAssuntoVisivel(true);
+    formAssunto.resetFields();
+  };
+  const abrirModalEditarAssunto = (subject: Subject) => {
+    setEditandoAssunto(subject);
+    setModalAssuntoVisivel(true);
+    formAssunto.setFieldsValue({
+      name: subject.name,
+      description: subject.description,
+    });
+  };
+  const fecharModalAssunto = () => {
+    setModalAssuntoVisivel(false);
+    setParentIdAssunto(null);
+    setEditandoAssunto(null);
+    formAssunto.resetFields();
+  };
+
+  const onFinishAssunto = async (values: any) => {
+    setLoadingAssunto(true);
+    try {
+      if (editandoAssunto) {
+        // Editar
+        await api.patch(`/subjects/${editandoAssunto.id}`, {
+          name: values.name,
+          description: values.description,
+        });
+        message.success("Assunto editado com sucesso!");
+      } else {
+        // Criar
+        await api.post("/subjects", {
+          name: values.name,
+          description: values.description,
+          parentId: parentIdAssunto,
+        });
+        message.success("Assunto cadastrado com sucesso!");
+      }
+      fecharModalAssunto();
+      fetchSubjects();
+    } catch (e) {
+      message.error("Erro ao salvar assunto");
+    } finally {
+      setLoadingAssunto(false);
+    }
+  };
+
+  function renderSubjectTree(subject: Subject) {
+    return (
+      <FileTree.Folder
+        key={subject.id}
+        name={subject.name}
+        onCreateSubject={() => abrirModalCriarAssunto(subject.id)}
+        onEditSubject={() => abrirModalEditarAssunto(subject)}
+        onCreateQuestion={() => navigate(`/questoes/${subject.id}/criar`)}
+        subjectData={subject}
+      >
+        {subject.children && subject.children.length > 0
+          ? subject.children.map((child) => renderSubjectTree(child))
+          : null}
+      </FileTree.Folder>
+    );
+  }
 
   return (
     <div>
@@ -122,12 +215,6 @@ export const Questoes: React.FC = () => {
           <p style={{ margin: 0, color: "#666" }}>
             Gerencie todas as suas questões em um só lugar
           </p>
-        </div>
-        <div>
-          <Button type="default" onClick={() => navigate("/nova-questao")}>
-            <PlusOutlined />
-            Nova Questão
-          </Button>
         </div>
       </div>
 
@@ -224,16 +311,28 @@ export const Questoes: React.FC = () => {
           }}
         >
           <h3 style={{ margin: "0 0 12px 0", fontWeight: 600, fontSize: 18 }}>
-            Arquivos
+            Catalogo de Questões
           </h3>
-          <FileTree.Root>
-            <FileTree.Folder name="Documentos">
-              <FileTree.File name="Questão 3.txt" />
-            </FileTree.Folder>
-            <FileTree.Folder name="Arquivos Recentes">
-              <FileTree.File name="Questão 3.txt" />
-            </FileTree.Folder>
-          </FileTree.Root>
+          {loadingAssuntos ? (
+            <Spin />
+          ) : subjects.length === 0 ? (
+            <Empty
+              description="Nenhum assunto cadastrado"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            >
+              <Button
+                type="primary"
+                icon={<PlusCircleOutlined />}
+                onClick={() => abrirModalCriarAssunto(null)}
+              >
+                Cadastrar Assunto
+              </Button>
+            </Empty>
+          ) : (
+            <FileTree.Root>
+              {subjects.map((subject) => renderSubjectTree(subject))}
+            </FileTree.Root>
+          )}
         </div>
         {/* Container de exibição */}
         <div
@@ -355,6 +454,24 @@ export const Questoes: React.FC = () => {
       >
         Tem certeza que deseja deletar a questão "{questaoDeletando?.title}"?
       </Modal>
+
+      {/* Modal de criar/editar assunto */}
+      <SubjectModal
+        visible={modalAssuntoVisivel}
+        onClose={fecharModalAssunto}
+        onSubmit={onFinishAssunto}
+        initialValues={
+          editandoAssunto
+            ? {
+                name: editandoAssunto.name,
+                description: editandoAssunto.description,
+              }
+            : undefined
+        }
+        parentId={parentIdAssunto}
+        loading={loadingAssunto}
+        modoEdicao={!!editandoAssunto}
+      />
     </div>
   );
 };

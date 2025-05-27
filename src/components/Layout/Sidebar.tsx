@@ -1,24 +1,24 @@
-import styled from 'styled-components'
-import { Book, FileQuestion, Home } from 'lucide-react'
-import { MenuItem } from './MenuItem'
+import styled from "styled-components";
+import { FileQuestion, Home } from "lucide-react";
+import { MenuItem } from "./MenuItem";
 
 interface SidebarProps {
-  isCollapsed: boolean
+  isCollapsed: boolean;
 }
 
 const SidebarContainer = styled.div<{ isCollapsed: boolean }>`
-  width: ${props => props.isCollapsed ? '60px' : '240px'};
+  width: ${(props) => (props.isCollapsed ? "60px" : "240px")};
   transition: width 0.3s ease;
   background-color: white;
   height: 100%;
   border-right: 1px solid #eee;
-`
+`;
 
 const MenuContainer = styled.nav`
   display: flex;
   flex-direction: column;
   gap: 4px;
-`
+`;
 
 export function Sidebar({ isCollapsed }: SidebarProps) {
   return (
@@ -31,12 +31,6 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
           isCollapsed={isCollapsed}
         />
         <MenuItem
-          icon={<Book />}
-          text="Assuntos"
-          to="/assuntos"
-          isCollapsed={isCollapsed}
-        />
-        <MenuItem
           icon={<FileQuestion />}
           text="Questões"
           to="/questoes"
@@ -44,5 +38,5 @@ export function Sidebar({ isCollapsed }: SidebarProps) {
         />
       </MenuContainer>
     </SidebarContainer>
-  )
-} 
+  );
+}
